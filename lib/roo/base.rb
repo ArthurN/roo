@@ -445,6 +445,14 @@ class Roo::Base
     elsif [:first_row, true].include?(options[:headers])
       @headers = []
       row(first_row).each_with_index { |x, i| @headers << [x, i + 1] }
+    elsif options[:header_line] && options[:header_line].is_a?(Numeric)
+      if options[:headers_to_match] && options[:headers_to_match].is_a?(Hash)
+        @header_line = options[:header_line]
+        set_headers_matching_any(options[:headers_to_match])
+      else
+        @headers = []
+        row(options[:header_line]).each_with_index { |x, i| @headers << [x, i + 1] }
+      end
     else
       set_headers(options)
     end
@@ -536,6 +544,19 @@ class Roo::Base
     # then create new hash by indexing strings and keeping integers for header array
     @headers = row_with(hash.values, true)
     @headers = Hash[hash.keys.zip(@headers.map { |x| header_index(x) })]
+  end
+
+  # Sets the headers from row @header_line, by searching for anything that matches the values passed in via +headers+
+  # +headers+ should be a hash of key => /regexp/
+  # headers can thus be specified in any order, and if no header is found matching the regular expression, it will not
+  # show up via #each or #parse
+  def set_headers_matching_any(headers)
+    @headers = {}
+    header_row = row(@header_line)
+    headers.each do |header_name, header_query|
+      index = header_index(header_row.grep(header_query).first) rescue nil
+      @headers[header_name] = index unless index.nil?
+    end
   end
 
   def header_index(query)
